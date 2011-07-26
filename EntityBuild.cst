@@ -1,0 +1,45 @@
+<%-- 
+Name:
+Author: 
+Description: 
+--%>
+<%@ CodeTemplate Language="C#" TargetLanguage="Text" Src="" Inherits="" Debug="False" Description="Template description here." %>
+<%@ Register Name="LinqEntity" Template="LinqToSqlEntity.cst" MergeProperties="False" ExcludeProperties="" %>
+<%@ Property Name="DataBase" Type="SchemaExplorer.DatabaseSchema" Category="Context" Description="Select bulider database."%>
+<%@ Property Name="EntityNameSpace" Type="System.String" Default="Entity" %>
+<%@ Property Name="BasePath" Type="System.String" Default="E:/Entity/" %>
+<%@ Assembly Name="System.Data" %>
+<%@ Assembly Name="SchemaExplorer" %>
+<%@ Import Namespace="System.Data" %>
+<%@ Import Namespace="System.Text" %>
+<%@ Import Namespace="SchemaExplorer" %>
+<% Init(); %>
+<script runat="template">
+
+
+
+public void Init()
+{
+ 	CodeTemplate ct = new LinqEntity();
+	for(int i=0;i<DataBase.Tables.Count;i++){
+		ct.SetProperty("NameSpace", GetEntityNameSpace());
+		ct.SetProperty("SourceTable",DataBase.Tables[i]);
+		ct.RenderToFile(GetEntityFileName(i), true);
+		
+	}
+}
+
+public string GetDataBaseName()
+{
+	return DataBase.Name.Replace("_","");
+}
+
+public string GetEntityFileName(int i)
+{
+	return BasePath+DataBase.Tables[i].Name.Replace("_","")+".cs";
+}
+public string GetEntityNameSpace()
+{
+	return GetDataBaseName()+"."+EntityNameSpace;
+}
+</script>

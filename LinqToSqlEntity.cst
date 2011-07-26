@@ -1,0 +1,219 @@
+<%-- 
+Name:
+Author: fengpengbin@live.cn 
+Description: 
+--%>
+<%@ CodeTemplate Language="C#" TargetLanguage="Text" Src="" Inherits="" Debug="False" Description="Template description here." %>
+<%@ Property Name="SourceTable" Type="SchemaExplorer.TableSchema" Category="Context" Description=""%>
+<%@ Property Name="NameSpace" Type="System.String" Default="Entity"  %>
+<%@ Assembly Name="System.Data" %>
+<%@ Assembly Name="SchemaExplorer" %>
+<%@ Import Namespace="System.Data" %>
+<%@ Import Namespace="SchemaExplorer" %>
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Data.Linq.Mapping;
+
+namespace <%=NameSpace %>
+{
+	[Table(Name="<%= GetClassName(false)%>")]
+    [Serializable]
+	public class <%= GetClassName(true)%>
+    {
+		<% for(int i=0;i<SourceTable.Columns.Count;i++)
+		{
+		%>
+		[Column(Name="<%=SourceTable.Columns[i].Name.Substring(SourceTable.Columns[i].Name.IndexOf('_')+1)%>"<%= this.IsIdentity(i) %><%=GetT(i)%><%=GetUpdateCheck(i)%><%=GetCanBeNull(i)%>)]
+		public <%=DataType2CSharpType(SourceTable.Columns[i].DataType)+" "+SourceTable.Columns[i].Name.Substring(SourceTable.Columns[i].Name.IndexOf('_')+1)%>
+		{
+			set;
+			get;
+		}
+		<%}%>
+	}
+}
+<script runat="template">
+// Get Class Name
+public string GetClassName(bool isFilter)
+{
+	if(isFilter){
+		return SourceTable.Name.Replace("_","");
+	}
+	else
+	{
+		return SourceTable.Name;
+		
+	}
+}
+
+public string GetT(int i)
+{
+	if(SourceTable.Columns[i].IsPrimaryKeyMember)
+	{
+		return ",IsPrimaryKey=true";
+	}
+	else
+	{
+		return "";
+		}
+}
+public string IsIdentity(int i)
+{
+	if((bool)SourceTable.Columns[i].ExtendedProperties["CS_isIdentity"].Value)
+    {
+        return ",IsDbGenerated=true";
+    }
+    return "";
+}
+public string GetUpdateCheck(int i)
+{
+	if(!SourceTable.Columns[i].IsPrimaryKeyMember)
+	{
+		return ",UpdateCheck = UpdateCheck.Never";
+	}
+	else
+	{
+		return "";
+	}
+}
+public string GetCanBeNull(int i)
+{
+	if(SourceTable.Columns[i].AllowDBNull)
+	{
+		return ",CanBeNull=true";
+	}
+	else
+	{
+		return "";
+	}
+}
+public string GetIsForeignKeyMember(int i)
+{
+	if(SourceTable.Columns[i].IsForeignKeyMember)
+	{
+		return "0";
+	}
+	return "1";
+}
+
+//----------------------------------------------------------
+public string DataType2CSharpType(System.Data.DbType dbType)
+
+{
+
+    switch (dbType)
+
+    {
+
+        case DbType.AnsiString:
+
+            return "string";
+
+        case DbType.AnsiStringFixedLength:
+
+            return "string";
+
+        case DbType.Binary:
+
+            return "byte[]";
+
+        case DbType.Boolean:
+
+            return "bool";
+
+        case DbType.Byte:
+
+            return "byte";
+
+        case DbType.Currency:
+
+            return "decimal";
+
+        case DbType.Date:
+
+            return "DateTime";
+
+        case DbType.DateTime:
+
+            return "DateTime";
+
+        case DbType.Decimal:
+
+            return "decimal";
+
+        case DbType.Double:
+
+            return "double";
+
+        case DbType.Guid:
+
+            return "Guid";
+
+        case DbType.Int16:
+
+            return "short";
+
+        case DbType.Int32:
+
+            return "int";
+
+        case DbType.Int64:
+
+            return "long";
+
+        case DbType.Object:
+
+            return "object";
+
+        case DbType.SByte:
+
+            return "sbyte";
+
+        case DbType.Single:
+
+            return "float";
+
+        case DbType.String:
+
+            return "string";
+
+        case DbType.StringFixedLength:
+
+            return "string";
+
+        case DbType.Time:
+
+            return "TimeSpan";
+
+        case DbType.UInt16:
+
+            return "ushort";
+
+        case DbType.UInt32:
+
+            return "uint";
+
+        case DbType.UInt64:
+
+            return "ulong";
+
+        case DbType.VarNumeric:
+
+            return "decimal";
+
+        case DbType.Xml:
+
+            return "string";
+			
+		
+
+        default:
+
+            return "object";
+
+    }
+
+}
+</script>

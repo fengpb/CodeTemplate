@@ -1,0 +1,307 @@
+<%-- 
+Name: create procedure with insert.
+Author: fengpengbin@live.cn
+Description: 
+--%>
+<%@ CodeTemplate Language="C#" TargetLanguage="Text" Src="" Inherits="" Debug="False" CompilerVersion="v3.5" Description="Template description here." %>
+<%@ Property Name="SourceTable" Type="SchemaExplorer.TableSchema" Category="Context" Description=""%>
+<%@ Assembly Name="SchemaExplorer" %>
+<%@ Import Namespace="SchemaExplorer" %>
+CREATE PROCEDURE <%= ProcName %>
+(
+<%=GetParams(false) %>
+)
+AS
+BEGIN
+INSERT INTO <%=GetTableName()%> 
+(
+<%=GetColumns(false) %>
+)
+VALUES 
+(
+<%=GetColumns(true) %>
+)
+<% if(this.identityColumn!=null){ %>
+SET @<%=identityColumn.Name %> = SCOPE_IDENTITY();
+<%}%>
+RETURN @@IDENTITY;
+END
+GO
+--///////////////////////////////////////////////////////
+
+[Function(Name = "<%=ProcName %>")]
+public <%=DataType2CSharpType(identityColumn.DataType) %> <%=ProcName %>(
+    <%=GetParams(true) %>
+    )
+{
+    IExecuteResult result = this.ExecuteMethodCall(this, ((MethodInfo)(MethodInfo.GetCurrentMethod())), <%=GetColumns(false)%>);
+    return (<%=DataType2CSharpType(identityColumn.DataType) %>)result.ReturnValue;
+}
+
+<script runat="template">
+private string _procName;
+[Optional, NotChecked]
+[Category("OutputInfo")]
+[Description("Procedure name.")]
+[DefaultValue("")]
+public string ProcName
+{
+    get 
+    {
+          return (String.IsNullOrEmpty(_procName)? "SP_"+SourceTable.Name+"_Insert":_procName);      
+    }
+    set 
+    {
+        _procName = value;
+    }
+}
+// My methods here.
+
+public string GetTableName()
+{
+    return "[dbo].["+SourceTable.Name+"]";
+}
+
+public string GetColumns(bool isVal)
+{
+	System.Text.StringBuilder sb = new System.Text.StringBuilder();
+    for(int i=0;i<SourceTable.Columns.Count;i++)
+    {
+        SchemaExplorer.ColumnSchema column = SourceTable.Columns[i];
+        if(!this.IsIdentity(column))//outer identity
+        {
+            if(i<SourceTable.Columns.Count-1)
+            {
+                if(isVal){
+                sb.AppendLine("@"+column.Name+",");
+                }else
+                {
+                    sb.AppendLine(column.Name+",");
+                }
+                
+            }
+            else
+            {
+                if(isVal)
+                {
+                sb.AppendLine("@"+column.Name);
+                }else{sb.AppendLine(column.Name);}
+            }
+        }
+    }
+    return sb.ToString();
+}
+public SchemaExplorer.ColumnSchema identityColumn =null ;
+public string GetParams(bool isMothed)
+{
+    System.Text.StringBuilder sb = new System.Text.StringBuilder();
+    
+    for(int i=0;i<SourceTable.Columns.Count;i++)
+    {
+        SchemaExplorer.ColumnSchema column = SourceTable.Columns[i];
+        if(!this.IsIdentity(column))//outer identity
+        {
+            if(i<SourceTable.Columns.Count-1)
+            {
+                if(isMothed)
+                {
+                    sb.AppendLine(string.Format("[ParameterAttribute(Name=\"{0}\")]{1} {2},",column.Name,DataType2CSharpType(column.DataType),column.Name));    
+                }else{
+                    sb.AppendLine(string.Format("@{0} {1} ,",column.Name,this.GetDBType(column)));
+                }
+            }
+            else
+            {
+                if(isMothed)
+                {
+                    sb.AppendLine(string.Format("[ParameterAttribute(Name=\"{0}\")]{1} {2}",column.Name,DataType2CSharpType(column.DataType),column.Name));    
+                }else{
+                    sb.AppendLine(string.Format("@{0} {1} ",column.Name,this.GetDBType(column)));
+                }
+                if(identityColumn!=null){
+                    sb.Append(",");
+                }
+            }
+        }
+        else
+        {
+            identityColumn = column;
+        }
+    }
+    if(identityColumn!=null){
+        if(isMothed)
+        {
+                sb.AppendLine(string.Format("[ParameterAttribute(Name=\"{0}\")] ref {1} {2}",identityColumn.Name,DataType2CSharpType(identityColumn.DataType),identityColumn.Name));    
+        }else{
+            sb.AppendLine(string.Format("@{0} {1} OUTPUT",identityColumn.Name,this.GetDBType(identityColumn)));
+        }
+    }
+    return sb.ToString();
+}
+
+
+public string GetValus()
+{
+    System.Text.StringBuilder sb = new System.Text.StringBuilder();
+    
+    for(int i=0;i<SourceTable.Columns.Count;i++)
+    {
+        SchemaExplorer.ColumnSchema column = SourceTable.Columns[i];
+        if(!this.IsIdentity(column))//outer identity
+        {
+            if(i<SourceTable.Columns.Count-1)
+            {
+                sb.AppendLine(string.Format("@{0}={1},",column.Name,column.Name));
+            }
+            else
+            {
+                sb.AppendLine(string.Format("@{0}={1} ,",column.Name,column.Name));
+            }
+        }
+        else
+        {
+            identityColumn = column;
+        }
+    }
+    return sb.ToString();
+}
+
+public string GetDBType(SchemaExplorer.ColumnSchema column)
+{
+    switch(column.DataType)
+    {
+        case DbType.AnsiString:
+        case DbType.AnsiStringFixedLength:
+        case DbType.String:
+        case DbType.StringFixedLength:
+            return string.Format("{0}({1})",column.NativeType,column.Size);
+        default:
+            return column.NativeType;    
+    }
+    
+}
+
+public bool IsIdentity(SchemaExplorer.ColumnSchema column)
+{
+    
+    return (bool)column.ExtendedProperties["CS_isIdentity"].Value;
+}
+
+public string DataType2CSharpType(System.Data.DbType dbType)
+
+{
+
+    switch (dbType)
+
+    {
+
+        case DbType.AnsiString:
+
+            return "string";
+
+        case DbType.AnsiStringFixedLength:
+
+            return "string";
+
+        case DbType.Binary:
+
+            return "byte[]";
+
+        case DbType.Boolean:
+
+            return "bool";
+
+        case DbType.Byte:
+
+            return "byte";
+
+        case DbType.Currency:
+
+            return "decimal";
+
+        case DbType.Date:
+
+            return "DateTime";
+
+        case DbType.DateTime:
+
+            return "DateTime";
+
+        case DbType.Decimal:
+
+            return "decimal";
+
+        case DbType.Double:
+
+            return "double";
+
+        case DbType.Guid:
+
+            return "Guid";
+
+        case DbType.Int16:
+
+            return "short";
+
+        case DbType.Int32:
+
+            return "int";
+
+        case DbType.Int64:
+
+            return "long";
+
+        case DbType.Object:
+
+            return "object";
+
+        case DbType.SByte:
+
+            return "sbyte";
+
+        case DbType.Single:
+
+            return "float";
+
+        case DbType.String:
+
+            return "string";
+
+        case DbType.StringFixedLength:
+
+            return "string";
+
+        case DbType.Time:
+
+            return "TimeSpan";
+
+        case DbType.UInt16:
+
+            return "ushort";
+
+        case DbType.UInt32:
+
+            return "uint";
+
+        case DbType.UInt64:
+
+            return "ulong";
+
+        case DbType.VarNumeric:
+
+            return "decimal";
+
+        case DbType.Xml:
+
+            return "string";
+			
+		
+
+        default:
+
+            return "object";
+
+    }
+
+}
+</script>

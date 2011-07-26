@@ -1,0 +1,89 @@
+<%-- 
+Name: create procedure with pager
+Author: fengpengbin@live.cn
+Description: 
+--%>
+<%@ CodeTemplate Language="C#" TargetLanguage="Text" Src="" Inherits="" Debug="False" CompilerVersion="v3.5" Description="Template description here." %>
+<%@ Property Name="SourceTable" Type="SchemaExplorer.TableSchema" Category="Context" Description=""%>
+<%@ Property Name="OrderByColumn" Type="SchemaExplorer.ColumnSchema" Category="Context" Description=""%>
+<%@ Assembly Name="SchemaExplorer" %>
+<%@ Import Namespace="SchemaExplorer" %>
+<%@ Import Namespace="System.Text" %>
+CREATE PROCEDURE  [dbo].[<%=ProcName %>]
+(
+	@PageIndex	INT,	--??
+	@PageSize	INT,	--???
+	@Filter		NVARCHAR(300),
+	@RowCount	INT	OUTPUT	--????
+)
+AS
+BEGIN
+    SELECT <% = this.GetColumns()%> FROM <%= this.GetTableName()%>
+    DECLARE @SqlQuery nvarchar(2000)
+	DECLARE @Filters nvarchar(200)
+	SET @Filters='WHERE ';
+	IF(LTRIM(RTRIM(@Filter))<>'')
+	BEGIN
+		SET  @Filters += @Filter
+	END
+	SET @SqlQuery ='
+        SELECT <%=this.GetColumns()%> FROM (
+		SELECT ROW_NUMBER()OVER(ORDER BY <%=OrderByColumn.Name %> DESC) AS row_num,* 
+		FROM <%= this.GetTableName()%>
+		'+@Filters+'
+	) 
+	AS T
+	WHERE T.row_num between '+Cast((@PageIndex-1)*@PageSize as nvarchar(8))+'+1 and ('+CAST(@PageIndex as nvarchar(20))+'*'+CAST(@PageSize as nvarchar(20))+')';
+	
+	
+	EXECUTE (@SqlQuery)
+	SET @SqlQuery = 'SELECT @Row=COUNT(<%=OrderByColumn.Name %>) FROM <%= this.GetTableName()%> '+CAST(@Filters AS NVARCHAR(200));
+	
+	Execute sp_executesql @SqlQuery,N'@Row int output' ,@Row=@RowCount OUTPUT
+	
+END
+
+<script runat="template">
+private string _procName;
+[Optional, NotChecked]
+[Category("OutputInfo")]
+[Description("Procedure name.")]
+[DefaultValue("")]
+public string ProcName
+{
+    get 
+    {
+          return (String.IsNullOrEmpty(_procName)? "SP_"+SourceTable.Name+"_List":_procName);      
+    }
+    set 
+    {
+        _procName = value;
+    }
+}
+
+
+// My methods here.
+
+public string GetTableName()
+{
+    return "[dbo].["+SourceTable.Name+"]";
+}
+
+public string GetColumns()
+{
+	System.Text.StringBuilder sb = new System.Text.StringBuilder();
+    for(int i=0;i<SourceTable.Columns.Count;i++)
+    {
+        SchemaExplorer.ColumnSchema column = SourceTable.Columns[i];
+        if(i<SourceTable.Columns.Count-1)
+        {
+            sb.Append(column.Name+",");
+        }
+        else
+        {
+            sb.Append(column.Name);
+        }
+    }
+    return sb.ToString();
+}
+</script>
